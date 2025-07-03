@@ -1,0 +1,145 @@
+const express = require('express');
+const { Pool } = require('pg');
+const cors = require('cors');
+require('dotenv').config();
+
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+// Configuración de la conexión a PostgreSQL
+const pool = new Pool({
+  user: process.env.DB_USER,
+  host: process.env.DB_HOST,
+  database: process.env.DB_NAME,
+  password: process.env.DB_PASSWORD,
+  port: process.env.DB_PORT,
+  schema: process.env.DB_SCHEMA
+});
+
+// Configurar el cliente pg para confiar en la conexión
+process.env.PGSSLMODE = 'disable';
+
+pool.on('error', (err) => {
+  console.error('Error inesperado en el pool de conexiones:', err);
+});
+
+// Verificar conexión a la base de datos
+pool.connect((err, client, done) => {
+  if (err) {
+    console.error('Error al conectar con la base de datos:', err);
+  } else {
+    console.log('Conexión exitosa a la base de datos');
+    done();
+  }
+});
+
+// GET - Obtener vencimientos
+app.get('/api/ObtenerVencimientos', async (req, res) => {
+  try {
+    const query = `
+      SELECT 
+        vb.centrojudicial as "CentroJudicial",
+        vb.sistema as "Sistema",
+        vb.oficina as "Oficina",
+        vb.expt as "Expediente",
+        vb.persona as "Persona",
+        vb.documento as "Documento",
+        vb.caracterparte as "CaracterParte",
+        vb.grupo as "Grupo",
+        vb.alojamiento as "Alojamiento",
+        vb.pena as "Pena",
+        vb.delito as "Delito",
+        vb.cumpl_1_2_de_condena as "Cumpl12deCondena",
+        vb.cumpl_2_3_de_condena as "Cumpl23deCondena",
+        vb.cumpl_6_meses as "Cumpl6Meses",
+        vb.cumpl_3_meses as "Cumpl3Meses",
+        vb.cumplimiento_condena as "CumplimientoCondena",
+        vb.responsable as "VencimientosBenefResp",
+        vb.expt_fisc as "ExpedienteFisc",
+        vb.estado as "VencimientosBenefEstado",
+        vbo.observaciones as "observaciones",
+        vb.procid as "procid",
+        vb.partid as "partid",
+        vb.cumpl_1_2_de_condena_esta as "cumpl_1_2_de_condena_esta",
+        vb.cumpl_2_3_de_condena_esta as "cumpl_2_3_de_condena_esta",
+        vb.cumpl_6_meses_esta as "cumpl_6_meses_esta",
+        vb.cumpl_3_meses_esta as "cumpl_3_meses_esta",
+        vb.cumpl_condena_esta as "cumpl_condena_esta"
+      FROM public.vencimientos_beneficios vb
+      LEFT JOIN vencimientos_beneficios_obs vbo ON
+        vb.procid = vbo.vencimientos_beneficios_obspro AND
+        vb.partid = vbo.vencimientos_beneficios_obspar
+      WHERE vb.responsable IS NOT NULL
+        AND vb.oficina IN (
+          'DEFENSORIA OFICIAL PENAL DE LA X NOM',
+          'DEFENSORIA OFICIAL PENAL DE LA XI NOM',
+          'MPD - EQUIPO OPERATIVO N 6 - EJECUCION',
+          'MPD - EQUIPO OPERATIVO N 6 - EJECUCION',
+          'DEFENSORIA OFICIAL PENAL DE LA 3 NOM'
+        )
+        AND vb.caracterparte IN (
+          'CONDENADO - CON PERPETUA',
+          'CONDENADO/A -  PRISION DOMICILIARIA CON DISPOSITIVO ELECTRONICO',
+          'CONDENADO/A - CON BENEFICIO',
+          'CONDENADO/A - CON BENEFICIO - LIBERTAD CONDICIONAL',
+          'CONDENADO/A - CON BENEFICIO - SALIDAS TRANSITORIAS',
+          'CONDENADO/A - CON BENEFICIO - SEMILIBERTAD',
+          'CONDENADO/A - CON INTERNACION',
+          'CONDENADO/A - CON LIBERTAD VIGILADA',
+          'CONDENADO/A - PRESO/A',
+          'CONDENADO/A - PRISION DOMICILIARIA',
+          'CONDENADO/A - PRISION DOMICILIARIA CON DISPOSITIVO ELECTRONICO'
+        )
+    `;
+    
+    const result = await pool.query(query);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error al obtener vencimientos:', error);
+    const errorMessage = error.code === '28P01' ? 'Error de autenticación con la base de datos' :
+                        error.code === '3D000' ? 'Base de datos no encontrada' :
+                        error.code === 'ECONNREFUSED' ? 'No se puede conectar al servidor de base de datos' :
+                        error.code === '42P01' ? 'Tabla no encontrada' :
+                        'Error interno del servidor';
+    res.status(500).json({ 
+      error: errorMessage,
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
+// POST - Insertar observación
+app.post('/api/InsertarObservacion', async (req, res) => {
+  try {
+    const { obspro, obspar, obscen, obsexp, observaciones } = req.body;
+
+    const query = `
+      INSERT INTO vencimientos_beneficios_obs (
+        vencimientos_beneficios_obspro,
+        vencimientos_beneficios_obspar,
+        vencimientos_beneficios_obscen,
+        vencimientos_beneficios_obsexp,
+        observaciones
+      ) VALUES ($1, $2, $3, $4, $5)
+    `;
+
+    await pool.query(query, [obspro, obspar, obscen, obsexp, observaciones]);
+    res.json({ mensaje: 'Observación insertada correctamente' });
+  } catch (error) {
+    console.error('Error al insertar observación:', error);
+    const errorMessage = error.code === '23502' ? 'Faltan campos requeridos' :
+                        error.code === '23505' ? 'Registro duplicado' :
+                        error.code === '42P01' ? 'Tabla no encontrada' :
+                        'Error interno del servidor';
+    res.status(500).json({ 
+      error: errorMessage,
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Servidor ejecutándose en el puerto ${PORT}`);
+});
