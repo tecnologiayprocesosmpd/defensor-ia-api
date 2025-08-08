@@ -66,7 +66,7 @@ Respuesta: Array de objetos con la siguiente estructura:
 
 ### POST /api/InsertarObservacion
 
-Inserta una nueva observación para un vencimiento de beneficio.
+Inserta o actualiza una observación para un vencimiento de beneficio. Si ya existe un registro con los mismos valores de `obspro` y `obspar`, se actualizará; de lo contrario, se creará uno nuevo.
 
 Cuerpo de la solicitud (JSON):
 ```json
@@ -79,9 +79,16 @@ Cuerpo de la solicitud (JSON):
 }
 ```
 
-Respuesta exitosa:
+Respuesta exitosa (inserción):
 ```json
 {
   "mensaje": "Observación insertada correctamente"
+}
+```
+
+Respuesta exitosa (actualización):
+```json
+{
+  "mensaje": "Observación actualizada correctamente"
 }
 ```

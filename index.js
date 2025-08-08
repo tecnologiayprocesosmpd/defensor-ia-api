@@ -74,9 +74,9 @@ app.get('/api/ObtenerVencimientos', async (req, res) => {
         AND vb.oficina IN (
           'DEFENSORIA OFICIAL PENAL DE LA X NOM',
           'DEFENSORIA OFICIAL PENAL DE LA XI NOM',
+          'MPD - EQUIPO OPERATIVO DE EJECUCION',
           'MPD - EQUIPO OPERATIVO N 6 - EJECUCION',
-          'MPD - EQUIPO OPERATIVO N 6 - EJECUCION',
-          'DEFENSORIA OFICIAL PENAL DE LA 3 NOM'
+          'DEFENSORIA OFICIAL PENAL III NOM.'
         )
         AND vb.caracterparte IN (
           'CONDENADO - CON PERPETUA',
@@ -109,27 +109,55 @@ app.get('/api/ObtenerVencimientos', async (req, res) => {
   }
 });
 
-// POST - Insertar observación
+// POST - Insertar o actualizar observación
 app.post('/api/InsertarObservacion', async (req, res) => {
   try {
     const { obspro, obspar, obscen, obsexp, observaciones } = req.body;
 
-    const query = `
-      INSERT INTO vencimientos_beneficios_obs (
-        vencimientos_beneficios_obspro,
-        vencimientos_beneficios_obspar,
-        vencimientos_beneficios_obscen,
-        vencimientos_beneficios_obsexp,
-        observaciones
-      ) VALUES ($1, $2, $3, $4, $5)
+    // Verificar si el registro ya existe
+    const checkQuery = `
+      SELECT * FROM vencimientos_beneficios_obs 
+      WHERE vencimientos_beneficios_obspro = $1 
+      AND vencimientos_beneficios_obspar = $2
     `;
-
-    await pool.query(query, [obspro, obspar, obscen, obsexp, observaciones]);
-    res.json({ mensaje: 'Observación insertada correctamente' });
+    
+    const checkResult = await pool.query(checkQuery, [obspro, obspar]);
+    
+    let mensaje = '';
+    
+    if (checkResult.rows.length > 0) {
+      // Si existe, actualizar
+      const updateQuery = `
+        UPDATE vencimientos_beneficios_obs 
+        SET vencimientos_beneficios_obscen = $3,
+            vencimientos_beneficios_obsexp = $4,
+            observaciones = $5
+        WHERE vencimientos_beneficios_obspro = $1 
+        AND vencimientos_beneficios_obspar = $2
+      `;
+      
+      await pool.query(updateQuery, [obspro, obspar, obscen, obsexp, observaciones]);
+      mensaje = 'Observación actualizada correctamente';
+    } else {
+      // Si no existe, insertar
+      const insertQuery = `
+        INSERT INTO vencimientos_beneficios_obs (
+          vencimientos_beneficios_obspro,
+          vencimientos_beneficios_obspar,
+          vencimientos_beneficios_obscen,
+          vencimientos_beneficios_obsexp,
+          observaciones
+        ) VALUES ($1, $2, $3, $4, $5)
+      `;
+      
+      await pool.query(insertQuery, [obspro, obspar, obscen, obsexp, observaciones]);
+      mensaje = 'Observación insertada correctamente';
+    }
+    
+    res.json({ mensaje });
   } catch (error) {
-    console.error('Error al insertar observación:', error);
+    console.error('Error al insertar/actualizar observación:', error);
     const errorMessage = error.code === '23502' ? 'Faltan campos requeridos' :
-                        error.code === '23505' ? 'Registro duplicado' :
                         error.code === '42P01' ? 'Tabla no encontrada' :
                         'Error interno del servidor';
     res.status(500).json({ 

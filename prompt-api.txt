@@ -1,0 +1,175 @@
+Genera una API Rest para consumir datos desde una intranet y mantener la privacidad de los datos. La misma se conecta a una base de datos PostgreSQL en el servidor con direccion 172.24.120.80 puerto 5432. El usuario es postgres y la contraseña es defen$a2019. La base se llama SAEPBI y esta en el esquema public. Las tablas vencimientos_beneficios
+vencimientos_beneficios_obs
+
+El primer metodo que necesito es un GET que se llama ObtenerVencimientos y ejecuta la siguiente consulta:
+select * from public.vencimientos_beneficios vb
+left join vencimientos_beneficios_obs vbo on
+vb.procid = vbo.vencimientos_beneficios_obspro and vb.partid = vbo.vencimientos_beneficios_obspar
+where vb.responsable is not null
+
+Este metodo devuelve la siguiente estructura: (entre parentesis indico a que campos de la respuesta de postgresql se corresponde cada campo)
+CentroJudicial (centrojudicial)
+Sistema (sistema)
+Oficina (oficina)
+Expediente (expt)
+Persona (persona)
+Documento (documento)
+CaracterParte (caracterparte)
+Grupo (grupo)
+Alojamiento (alojamiento)
+Pena (pena)
+Delito (delito)
+Cumpl12deCondena (cumpl_1_2_de_condena)
+Cumpl23deCondena (cumpl_2_3_de_condena)
+Cumpl6Meses (cumpl_6_meses)
+Cumpl3Meses (cumpl_3_meses)
+CumplimientoCondena (cumplimiento_condena)
+VencimientosBenefResp (responsable)
+ExpedienteFisc (expt_fisc)
+VencimientosBenefEstado (estado)
+observaciones (observaciones)
+procid (procid)
+partid (partid)
+
+Y el segundo metodo, en este caso es POST, se llama InsertarObservacion que ejecuta la siguiente instruccion:
+INSERT INTO vencimientos_beneficios_obs (vencimientos_beneficios_obspro, vencimientos_beneficios_obspar, vencimientos_beneficios_obscen, vencimientos_beneficios_obsexp, observaciones)
+VALUES (valor_obspro, valor_obspar, 'valor_obscen', 'valor_obsexp', 'valor_observaciones')
+
+dondo los valores entre comillas son los argumentos que debe recibir el metodo. Los campos de la table son (con sus tipos de datos entre parentesis): vencimientos_beneficios_obspro (int4), vencimientos_beneficios_obspar (int4), vencimientos_beneficios_obscen (text), vencimientos_beneficios_obsexp (varchar(25)), observaciones (varchar(500)) 
+
+
+Actualiza la llamada al metodo InsertaObservacion con la siguiente informacion (entre parentesis aclaro a que campos corresponde la informacion a ser enviada):
+
+Cuerpo de la solicitud (JSON):
+{
+  "obspro": (procid),
+  "obspar": (partid),
+  "obscen": (centrojudicial),
+  "obsexp": (expt),
+  "observaciones": (observaciones)
+}
+
+La respuesta exitosa viene de la siguiente forma:
+json
+{
+  "mensaje": "Observación insertada correctamente"
+}
+
+Logica de colores
+Condicional 1/2 = IF('public.p_def_caratula'[1/2 condena][Date] <= (TODAY + 30) &&
+'public.p_def_caratula'(public p_def_l/2 condena.estadoagen) =
+"PENDIENTE"."Amarillo")
+Asi con los 5 agendamientos.
+Si alguno de los 5 esta en amarillo estado del agendamiento "Proximo a vencerse" sino "Vigente"
+
+-- Defensoría Oficial Penal de la Xa. Nominación  (Centro Judicial Capital) 
+select * from public.vencimientos_beneficios vb
+left join vencimientos_beneficios_obs vbo on
+vb.procid = vbo.vencimientos_beneficios_obspro and vb.partid = vbo.vencimientos_beneficios_obspar
+where vb.responsable is not null
+and vb.oficina = 'DEFENSORIA OFICIAL PENAL DE LA X NOM'
+and vb.caracterparte in ('CONDENADO - CON PERPETUA',
+'CONDENADO/A -  PRISION DOMICILIARIA CON DISPOSITIVO ELECTRONICO',
+'CONDENADO/A - CON BENEFICIO',
+'CONDENADO/A - CON BENEFICIO - LIBERTAD CONDICIONAL',
+'CONDENADO/A - CON BENEFICIO - SALIDAS TRANSITORIAS',
+'CONDENADO/A - CON BENEFICIO - SEMILIBERTAD',
+'CONDENADO/A - CON INTERNACION',
+'CONDENADO/A - CON LIBERTAD VIGILADA',
+'CONDENADO/A - PRESO/A',
+'CONDENADO/A - PRISION DOMICILIARIA',
+'CONDENADO/A - PRISION DOMICILIARIA CON DISPOSITIVO ELECTRONICO')
+-- Defensoría Oficial Penal de la XIa. Nominación  (Centro Judicial Capital)
+select * from public.vencimientos_beneficios vb
+left join vencimientos_beneficios_obs vbo on
+vb.procid = vbo.vencimientos_beneficios_obspro and vb.partid = vbo.vencimientos_beneficios_obspar
+where vb.responsable is not null
+and vb.oficina = 'DEFENSORIA OFICIAL PENAL DE LA XI NOM'
+and vb.caracterparte in ('CONDENADO - CON PERPETUA',
+'CONDENADO/A -  PRISION DOMICILIARIA CON DISPOSITIVO ELECTRONICO',
+'CONDENADO/A - CON BENEFICIO',
+'CONDENADO/A - CON BENEFICIO - LIBERTAD CONDICIONAL',
+'CONDENADO/A - CON BENEFICIO - SALIDAS TRANSITORIAS',
+'CONDENADO/A - CON BENEFICIO - SEMILIBERTAD',
+'CONDENADO/A - CON INTERNACION',
+'CONDENADO/A - CON LIBERTAD VIGILADA',
+'CONDENADO/A - PRESO/A',
+'CONDENADO/A - PRISION DOMICILIARIA',
+'CONDENADO/A - PRISION DOMICILIARIA CON DISPOSITIVO ELECTRONICO')
+-- Equipo Operativo de Ejecución (Centro Judicial Concepción)
+select * from public.vencimientos_beneficios vb
+left join vencimientos_beneficios_obs vbo on
+vb.procid = vbo.vencimientos_beneficios_obspro and vb.partid = vbo.vencimientos_beneficios_obspar
+where vb.responsable is not null
+and vb.oficina = 'MPD - EQUIPO OPERATIVO DE EJECUCION'
+and vb.caracterparte in ('CONDENADO - CON PERPETUA',
+'CONDENADO/A -  PRISION DOMICILIARIA CON DISPOSITIVO ELECTRONICO',
+'CONDENADO/A - CON BENEFICIO',
+'CONDENADO/A - CON BENEFICIO - LIBERTAD CONDICIONAL',
+'CONDENADO/A - CON BENEFICIO - SALIDAS TRANSITORIAS',
+'CONDENADO/A - CON BENEFICIO - SEMILIBERTAD',
+'CONDENADO/A - CON INTERNACION',
+'CONDENADO/A - CON LIBERTAD VIGILADA',
+'CONDENADO/A - PRESO/A',
+'CONDENADO/A - PRISION DOMICILIARIA',
+'CONDENADO/A - PRISION DOMICILIARIA CON DISPOSITIVO ELECTRONICO')
+-- Equipo Operativo n°6 (Centro Judicial Concepción)
+select * from public.vencimientos_beneficios vb
+left join vencimientos_beneficios_obs vbo on
+vb.procid = vbo.vencimientos_beneficios_obspro and vb.partid = vbo.vencimientos_beneficios_obspar
+where vb.responsable is not null
+and vb.oficina = 'MPD - EQUIPO OPERATIVO N 6 - EJECUCION'
+and vb.caracterparte in ('CONDENADO - CON PERPETUA',
+'CONDENADO/A -  PRISION DOMICILIARIA CON DISPOSITIVO ELECTRONICO',
+'CONDENADO/A - CON BENEFICIO',
+'CONDENADO/A - CON BENEFICIO - LIBERTAD CONDICIONAL',
+'CONDENADO/A - CON BENEFICIO - SALIDAS TRANSITORIAS',
+'CONDENADO/A - CON BENEFICIO - SEMILIBERTAD',
+'CONDENADO/A - CON INTERNACION',
+'CONDENADO/A - CON LIBERTAD VIGILADA',
+'CONDENADO/A - PRESO/A',
+'CONDENADO/A - PRISION DOMICILIARIA',
+'CONDENADO/A - PRISION DOMICILIARIA CON DISPOSITIVO ELECTRONICO')
+-- Defensoría Oficial Penal de la IIIa. Nominación  (Centro Judicial Monteros)
+select * from public.vencimientos_beneficios vb
+left join vencimientos_beneficios_obs vbo on
+vb.procid = vbo.vencimientos_beneficios_obspro and vb.partid = vbo.vencimientos_beneficios_obspar
+where vb.responsable is not null
+and vb.oficina = 'DEFENSORIA OFICIAL PENAL DE LA 3 NOM'
+and vb.caracterparte in ('CONDENADO - CON PERPETUA',
+'CONDENADO/A -  PRISION DOMICILIARIA CON DISPOSITIVO ELECTRONICO',
+'CONDENADO/A - CON BENEFICIO',
+'CONDENADO/A - CON BENEFICIO - LIBERTAD CONDICIONAL',
+'CONDENADO/A - CON BENEFICIO - SALIDAS TRANSITORIAS',
+'CONDENADO/A - CON BENEFICIO - SEMILIBERTAD',
+'CONDENADO/A - CON INTERNACION',
+'CONDENADO/A - CON LIBERTAD VIGILADA',
+'CONDENADO/A - PRESO/A',
+'CONDENADO/A - PRISION DOMICILIARIA',
+'CONDENADO/A - PRISION DOMICILIARIA CON DISPOSITIVO ELECTRONICO')
+
+Agrega las siguientes campos a la respuesta del metodo ObtenerVencimientos: cumpl_1_2_de_condena_esta, cumpl_2_3_de_condena_esta, cumpl_6_meses_esta, cumpl_3_meses_esta y cumpl_condena_esta
+
+Las columnas Cumpl12deCondena, Cumpl23deCondena, Cumpl6Meses, Cumpl3Meses y CumplimientoCondena son columnas con fechas en el formato "Dia de la semana", "Número" de "Mes" de "Año". Por ejemplo Sábado, 03 de Marzo de 2029. Se debe interpretar como dd/mm/yyyy. En el caso de Domingo, 03 de Diciembre de 2034 se interpreta como 03/12/2034. Se debe agregar al lado de cada una de estas columnas la misma informacion pero en formato dd/mm/yyyy
+
+Estas columnas deben ser coloreadas siguiendo la siguiente logica:
+
+Si cumpl_1_2_de_condena_esta es "PENDIENTE" y:
+la fecha de la columna Cumpl12deCondena es menor o igual que la fecha actual mas 30 dias debe ser pintada de amarillo.
+la fecha de la columna Cumpl12deCondena es menor que la fecha actual debe ser pintada de rojo.
+Si cumpl_2_3_de_condena_esta es "PENDIENTE" y:
+la fecha de la columna Cumpl23deCondena es menor o igual que la fecha actual mas 30 dias debe ser pintada de amarillo.
+la fecha de la columna Cumpl23deCondena es menor que la fecha actual debe ser pintada de rojo.
+Si cumpl_6_meses_esta es "PENDIENTE" y:
+la fecha de la columna Cumpl6Meses es menor o igual que la fecha actual mas 30 dias debe ser pintada de amarillo.
+la fecha de la columna Cumpl6Meses es menor que la fecha actual debe ser pintada de rojo.
+Si cumpl_3_meses_esta es "PENDIENTE" y:
+la fecha de la columna Cumpl3Meses es menor o igual que la fecha actual mas 30 dias debe ser pintada de amarillo.
+la fecha de la columna Cumpl3Meses es menor que la fecha actual debe ser pintada de rojo.
+Si cumpl_condena_esta es "PENDIENTE" y:
+la fecha de la columna CumplimientoCondena es menor o igual que la fecha actual mas 30 dias debe ser pintada de amarillo.
+la fecha de la columna CumplimientoCondena es menor que la fecha actual debe ser pintada de rojo.
+
+
+- Color amarillo: #FFEB9C
+- Color rojo: #F0BBAC
