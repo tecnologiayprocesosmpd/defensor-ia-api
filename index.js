@@ -66,7 +66,11 @@ app.get('/api/ObtenerVencimientos', async (req, res) => {
         vb.cumpl_6_meses_esta as "cumpl_6_meses_esta",
         vb.cumpl_3_meses_esta as "cumpl_3_meses_esta",
         vb.cumpl_condena_esta as "cumpl_condena_esta",
-        vb.ultima_visita as "ultima_visita"
+        vb.ultima_visita as "ultima_visita",
+        vb.fecha_hecho as "fecha_hecho",
+        vb.en_dis_tra as "en_dis_tra",
+        vb.texto as "texto",
+        vb.caratula as "caratula"
       FROM public.vencimientos_beneficios vb
       LEFT JOIN vencimientos_beneficios_obs vbo ON
         vb.procid = vbo.vencimientos_beneficios_obspro AND
