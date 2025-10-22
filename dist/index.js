@@ -20,37 +20,6 @@ const pool = new Pool({
 // Configurar el cliente pg para confiar en la conexión
 process.env.PGSSLMODE = 'disable';
 
-// Variables globales para el estado de la aplicación
-const startTime = new Date();
-let dbStatus = {
-  isConnected: false,
-  lastCheck: null,
-  error: null
-};
-
-// Función para verificar la conexión a la base de datos
-async function checkDatabaseConnection() {
-  try {
-    const client = await pool.connect();
-    await client.query('SELECT 1');
-    client.release();
-    dbStatus = {
-      isConnected: true,
-      lastCheck: new Date(),
-      error: null
-    };
-    return true;
-  } catch (error) {
-    dbStatus = {
-      isConnected: false,
-      lastCheck: new Date(),
-      error: error.message
-    };
-    console.error('Error al verificar la conexión a la base de datos:', error);
-    return false;
-  }
-}
-
 pool.on('error', (err) => {
   console.error('Error inesperado en el pool de conexiones:', err);
 });
@@ -59,59 +28,9 @@ pool.on('error', (err) => {
 pool.connect((err, client, done) => {
   if (err) {
     console.error('Error al conectar con la base de datos:', err);
-    dbStatus.isConnected = false;
-    dbStatus.error = err.message;
   } else {
     console.log('Conexión exitosa a la base de datos');
-    dbStatus.isConnected = true;
     done();
-  }
-  dbStatus.lastCheck = new Date();
-});
-
-// GET - Health check
-app.get(['/api/health', '/health'], async (req, res) => {
-  try {
-    // Verificar la conexión a la base de datos en tiempo real
-    await checkDatabaseConnection();
-    
-    // Calcular tiempo de actividad
-    const uptime = new Date() - startTime;
-    const uptimeFormatted = {
-      days: Math.floor(uptime / (1000 * 60 * 60 * 24)),
-      hours: Math.floor((uptime % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
-      minutes: Math.floor((uptime % (1000 * 60 * 60)) / (1000 * 60)),
-      seconds: Math.floor((uptime % (1000 * 60)) / 1000)
-    };
-    
-    // Obtener información del package.json
-    const packageInfo = require('./package.json');
-    
-    // Construir respuesta
-    const healthStatus = {
-      status: 'UP',
-      version: packageInfo.version,
-      name: packageInfo.name,
-      uptime: uptimeFormatted,
-      timestamp: new Date(),
-      database: {
-        status: dbStatus.isConnected ? 'UP' : 'DOWN',
-        lastCheck: dbStatus.lastCheck,
-        error: dbStatus.error
-      },
-      environment: process.env.NODE_ENV || 'development'
-    };
-    
-    // Enviar respuesta con código 200 si todo está bien, o 503 si hay problemas con la BD
-    const statusCode = dbStatus.isConnected ? 200 : 503;
-    res.status(statusCode).json(healthStatus);
-  } catch (error) {
-    console.error('Error al verificar el estado de la API:', error);
-    res.status(500).json({ 
-      status: 'ERROR',
-      error: 'Error al verificar el estado de la API',
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
   }
 });
 
