@@ -140,6 +140,7 @@ app.get('/api/ObtenerVencimientos', async (req, res) => {
         vb.expt_fisc as "ExpedienteFisc",
         vb.estado as "VencimientosBenefEstado",
         vbo.observaciones as "observaciones",
+        vbo.fecha as "fecha",
         vb.procid as "procid",
         vb.partid as "partid",
         vb.cumpl_1_2_de_condena_esta as "cumpl_1_2_de_condena_esta",
@@ -198,7 +199,7 @@ app.get('/api/ObtenerVencimientos', async (req, res) => {
 // POST - Insertar o actualizar observación
 app.post('/api/InsertarObservacion', async (req, res) => {
   try {
-    const { obspro, obspar, obscen, obsexp, observaciones } = req.body;
+    const { obspro, obspar, obscen, obsexp, observaciones, fecha } = req.body;
 
     // Verificar si el registro ya existe
     const checkQuery = `
@@ -217,12 +218,13 @@ app.post('/api/InsertarObservacion', async (req, res) => {
         UPDATE vencimientos_beneficios_obs 
         SET vencimientos_beneficios_obscen = $3,
             vencimientos_beneficios_obsexp = $4,
-            observaciones = $5
+            observaciones = $5,
+            fecha = COALESCE($6, NOW())
         WHERE vencimientos_beneficios_obspro = $1 
         AND vencimientos_beneficios_obspar = $2
       `;
       
-      await pool.query(updateQuery, [obspro, obspar, obscen, obsexp, observaciones]);
+      await pool.query(updateQuery, [obspro, obspar, obscen, obsexp, observaciones, fecha]);
       mensaje = 'Observación actualizada correctamente';
     } else {
       // Si no existe, insertar
@@ -232,11 +234,12 @@ app.post('/api/InsertarObservacion', async (req, res) => {
           vencimientos_beneficios_obspar,
           vencimientos_beneficios_obscen,
           vencimientos_beneficios_obsexp,
-          observaciones
-        ) VALUES ($1, $2, $3, $4, $5)
+          observaciones,
+          fecha
+        ) VALUES ($1, $2, $3, $4, $5, COALESCE($6, NOW()))
       `;
       
-      await pool.query(insertQuery, [obspro, obspar, obscen, obsexp, observaciones]);
+      await pool.query(insertQuery, [obspro, obspar, obscen, obsexp, observaciones, fecha]);
       mensaje = 'Observación insertada correctamente';
     }
     
