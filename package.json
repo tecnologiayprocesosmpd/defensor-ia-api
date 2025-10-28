@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
-    "build": "if not exist dist mkdir dist && copy index.js dist\\ && copy package.json dist\\ && copy package-lock.json dist\\ && copy .env dist\\"
+    "build": "powershell -NoProfile -Command \"if (!(Test-Path 'dist')) { New-Item -ItemType Directory -Path 'dist' | Out-Null }; Copy-Item -LiteralPath 'index.js' -Destination 'dist' -Force; Copy-Item -LiteralPath 'package.json' -Destination 'dist' -Force; if (Test-Path 'package-lock.json') { Copy-Item -LiteralPath 'package-lock.json' -Destination 'dist' -Force }; if (Test-Path '.env') { Copy-Item -LiteralPath '.env' -Destination 'dist' -Force }\""
   },
   "dependencies": {
     "express": "^4.18.2",

@@ -118,20 +118,55 @@ app.get(['/api/health', '/health'], async (req, res) => {
 // GET - Obtener vencimientos
 app.get('/api/ObtenerVencimientos', async (req, res) => {
   try {
-    // Parámetros opcionales de filtro (acepta mayúsculas/minúsculas)
-    const CentroJudicial = req.query.CentroJudicial || req.query.centrojudicial;
-    const Oficina = req.query.Oficina || req.query.oficina;
-
+    // Filtros dinámicos
     const params = [];
     const filters = [];
 
-    if (CentroJudicial) {
-      params.push(CentroJudicial);
-      filters.push(`vb.centrojudicial = $${params.length}`);
+    // Soporte para múltiples pares de Centro/Oficina vía query param JSON 'pairs'
+    // Ejemplo: pairs=[{"OficinaSistCarcelarioCentro":"Capital","OficinaSistCarcelarioOficina":"DEFENSORIA OFICIAL PENAL III NOM."},{"OficinaSistCarcelarioCentro":"Capital","OficinaSistCarcelarioOficina":"DEFENSORIA OFICIAL PENAL DE LA XI NOM"}]
+    let pairs = [];
+    const pairsRaw = req.query.pairs || req.query.Pairs;
+    if (pairsRaw) {
+      try {
+        const parsed = typeof pairsRaw === 'string' ? JSON.parse(pairsRaw) : pairsRaw;
+        if (Array.isArray(parsed)) {
+          pairs = parsed;
+        } else if (parsed && typeof parsed === 'object') {
+          pairs = [parsed];
+        }
+      } catch (e) {
+        // Ignorar error de parseo; se tratarán filtros individuales si están presentes
+      }
     }
-    if (Oficina) {
-      params.push(Oficina);
-      filters.push(`vb.oficina = $${params.length}`);
+
+    if (pairs.length > 0) {
+      const pairConditions = [];
+      for (const item of pairs) {
+        const cj = item.OficinaSistCarcelarioCentro || item.CentroJudicial || item.centrojudicial;
+        const of = item.OficinaSistCarcelarioOficina || item.Oficina || item.oficina;
+        if (cj && of) {
+          params.push(cj);
+          const cjIdx = params.length;
+          params.push(of);
+          const ofIdx = params.length;
+          pairConditions.push(`(vb.centrojudicial = $${cjIdx} AND vb.oficina = $${ofIdx})`);
+        }
+      }
+      if (pairConditions.length > 0) {
+        filters.push(`(${pairConditions.join(' OR ')})`);
+      }
+    } else {
+      // Parámetros opcionales individuales (acepta mayúsculas/minúsculas)
+      const CentroJudicial = req.query.CentroJudicial || req.query.centrojudicial;
+      const Oficina = req.query.Oficina || req.query.oficina;
+      if (CentroJudicial) {
+        params.push(CentroJudicial);
+        filters.push(`vb.centrojudicial = $${params.length}`);
+      }
+      if (Oficina) {
+        params.push(Oficina);
+        filters.push(`vb.oficina = $${params.length}`);
+      }
     }
 
     const query = `
