@@ -118,6 +118,22 @@ app.get(['/api/health', '/health'], async (req, res) => {
 // GET - Obtener vencimientos
 app.get('/api/ObtenerVencimientos', async (req, res) => {
   try {
+    // Parámetros opcionales de filtro (acepta mayúsculas/minúsculas)
+    const CentroJudicial = req.query.CentroJudicial || req.query.centrojudicial;
+    const Oficina = req.query.Oficina || req.query.oficina;
+
+    const params = [];
+    const filters = [];
+
+    if (CentroJudicial) {
+      params.push(CentroJudicial);
+      filters.push(`vb.centrojudicial = $${params.length}`);
+    }
+    if (Oficina) {
+      params.push(Oficina);
+      filters.push(`vb.oficina = $${params.length}`);
+    }
+
     const query = `
       SELECT 
         vb.centrojudicial as "CentroJudicial",
@@ -178,9 +194,10 @@ app.get('/api/ObtenerVencimientos', async (req, res) => {
           'CONDENADO/A - PRISION DOMICILIARIA',
           'CONDENADO/A - PRISION DOMICILIARIA CON DISPOSITIVO ELECTRONICO'
         )
+        ${filters.length ? ' AND ' + filters.join(' AND ') : ''}
     `;
     
-    const result = await pool.query(query);
+    const result = await pool.query(query, params);
     res.json(result.rows);
   } catch (error) {
     console.error('Error al obtener vencimientos:', error);
