@@ -149,7 +149,7 @@ app.get('/api/ObtenerVencimientos', async (req, res) => {
           const cjIdx = params.length;
           params.push(of);
           const ofIdx = params.length;
-          pairConditions.push(`(vb.centrojudicial = $${cjIdx} AND vb.oficina = $${ofIdx})`);
+          pairConditions.push(`(LOWER(vb.centrojudicial) = LOWER($${cjIdx}) AND LOWER(vb.oficina) = LOWER($${ofIdx}))`);
         }
       }
       if (pairConditions.length > 0) {
@@ -161,11 +161,11 @@ app.get('/api/ObtenerVencimientos', async (req, res) => {
       const Oficina = req.query.Oficina || req.query.oficina;
       if (CentroJudicial) {
         params.push(CentroJudicial);
-        filters.push(`vb.centrojudicial = $${params.length}`);
+        filters.push(`LOWER(vb.centrojudicial) = LOWER($${params.length})`);
       }
       if (Oficina) {
         params.push(Oficina);
-        filters.push(`vb.oficina = $${params.length}`);
+        filters.push(`LOWER(vb.oficina) = LOWER($${params.length})`);
       }
     }
 
