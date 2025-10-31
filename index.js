@@ -149,7 +149,7 @@ app.get('/api/ObtenerVencimientos', async (req, res) => {
           const cjIdx = params.length;
           params.push(of);
           const ofIdx = params.length;
-          pairConditions.push(`(unaccent(LOWER(vb.centrojudicial)) = unaccent(LOWER($${cjIdx})) AND unaccent(LOWER(vb.oficina)) = unaccent(LOWER($${ofIdx})))`);
+          pairConditions.push(`(translate(LOWER(vb.centrojudicial), 'áéíóúü', 'aeiouu') = translate(LOWER($${cjIdx}), 'áéíóúü', 'aeiouu') AND translate(LOWER(vb.oficina), 'áéíóúü', 'aeiouu') = translate(LOWER($${ofIdx}), 'áéíóúü', 'aeiouu'))`);
         }
       }
       if (pairConditions.length > 0) {
@@ -161,11 +161,11 @@ app.get('/api/ObtenerVencimientos', async (req, res) => {
       const Oficina = req.query.Oficina || req.query.oficina;
       if (CentroJudicial) {
         params.push(CentroJudicial);
-        filters.push(`unaccent(LOWER(vb.centrojudicial)) = unaccent(LOWER($${params.length}))`);
+        filters.push(`translate(LOWER(vb.centrojudicial), 'áéíóúü', 'aeiouu') = translate(LOWER($${params.length}), 'áéíóúü', 'aeiouu')`);
       }
       if (Oficina) {
         params.push(Oficina);
-        filters.push(`unaccent(LOWER(vb.oficina)) = unaccent(LOWER($${params.length}))`);
+        filters.push(`translate(LOWER(vb.oficina), 'áéíóúü', 'aeiouu') = translate(LOWER($${params.length}), 'áéíóúü', 'aeiouu')`);
       }
     }
 
