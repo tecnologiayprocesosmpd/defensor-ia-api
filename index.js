@@ -257,7 +257,7 @@ app.post('/api/InsertarObservacion', async (req, res) => {
     const checkQuery = `
       SELECT * FROM vencimientos_beneficios_obs 
       WHERE vencimientos_beneficios_obspro = $1 
-      AND vencimientos_beneficios_obs par = $2
+      AND vencimientos_beneficios_obspar = $2
     `;
 
     const checkResult = await pool.query(checkQuery, [obspro, obspar]);
@@ -466,7 +466,7 @@ app.get('/api/UltimaActualizacion', async (req, res) => {
     const query = `
       SELECT *
       FROM public.log_actualizaciones
-      ORDER BY fecha DESC
+      ORDER BY fecha_inicio DESC
       LIMIT 1
     `;
 
@@ -480,8 +480,7 @@ app.get('/api/UltimaActualizacion', async (req, res) => {
   } catch (error) {
     console.error('Error al obtener la última actualización:', error);
     const errorMessage = error.code === '42P01' ? 'Tabla no encontrada' :
-      error.code === '42703' ? 'Columna no encontrada (posible schema invalido)' :
-        'Error interno del servidor';
+      'Error interno del servidor';
     res.status(500).json({
       error: errorMessage,
       details: process.env.NODE_ENV === 'development' ? error.message : undefined

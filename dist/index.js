@@ -257,7 +257,7 @@ app.post('/api/InsertarObservacion', async (req, res) => {
     const checkQuery = `
       SELECT * FROM vencimientos_beneficios_obs 
       WHERE vencimientos_beneficios_obspro = $1 
-      AND vencimientos_beneficios_obs par = $2
+      AND vencimientos_beneficios_obspar = $2
     `;
 
     const checkResult = await pool.query(checkQuery, [obspro, obspar]);
@@ -453,6 +453,34 @@ app.post('/api/GrabarActa', async (req, res) => {
     const errorMessage = error.code === ' 23502' ? 'Faltan campos requeridos' :
       error.code === '42P01' ? 'Tabla no encontrada' :
         'Error interno del servidor';
+    res.status(500).json({
+      error: errorMessage,
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
+// GET - Obtener la última actualización
+app.get('/api/UltimaActualizacion', async (req, res) => {
+  try {
+    const query = `
+      SELECT *
+      FROM public.log_actualizaciones
+      ORDER BY fecha_inicio DESC
+      LIMIT 1
+    `;
+
+    const result = await pool.query(query);
+
+    if (result.rows.length > 0) {
+      res.json(result.rows[0]);
+    } else {
+      res.status(404).json({ message: 'No se encontraron registros de actualización' });
+    }
+  } catch (error) {
+    console.error('Error al obtener la última actualización:', error);
+    const errorMessage = error.code === '42P01' ? 'Tabla no encontrada' :
+      'Error interno del servidor';
     res.status(500).json({
       error: errorMessage,
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
