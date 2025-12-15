@@ -1,0 +1,43 @@
+# Comandos para copiar y pegar EN EL SERVIDOR (via SSH)
+# Estos comandos diagnosticaran por que GrabarActa da 404
+
+# Conectarte primero al servidor:
+# ssh TU_USUARIO@web-intranet.mpdtucuman.gob.ar
+
+# Luego copia y pega TODOS estos comandos:
+
+cd /var/www/web-intranet/defensor-ia/backend
+
+echo "=== TEST 1: Verificar lineas del archivo ==="
+wc -l index.js
+echo "Debe ser: 396 lineas"
+echo ""
+
+echo "=== TEST 2: Buscar endpoint GrabarActa ==="
+grep -n "GrabarActa" index.js
+echo ""
+
+echo "=== TEST 3: Verificar PM2 ==="
+pm2 status defensor-ia-api
+echo ""
+
+echo "=== TEST 4: REINICIAR PM2 (CRITICO) ==="
+pm2 restart defensor-ia-api
+sleep 3
+echo ""
+
+echo "=== TEST 5: Ver logs ==="
+pm2 logs defensor-ia-api --lines 30 --nostream
+echo ""
+
+echo "=== TEST 6: Probar endpoint (POST) ==="
+curl -X POST http://localhost:3000/api/GrabarActa \
+  -H "Content-Type: application/json" \
+  -d '{"NroExpediente":"TEST","NroActa":"001","ContenidoActa":"Test"}' \
+  -w "\nHTTP CODE: %{http_code}\n"
+echo ""
+
+echo "Si HTTP CODE sigue siendo 404, el problema es:"
+echo "1. El archivo index.js NO tiene el endpoint (verificar con grep arriba)"
+echo "2. PM2 esta ejecutando un archivo diferente"
+echo "3. Hay un proxy que bloquea la ruta"

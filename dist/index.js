@@ -5,7 +5,7 @@ require('dotenv').config();
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '10mb' })); // Aumentar límite para firmas biométricas
 
 // Configuración de la conexión a PostgreSQL
 const pool = new Pool({
@@ -74,7 +74,7 @@ app.get(['/api/health', '/health'], async (req, res) => {
   try {
     // Verificar la conexión a la base de datos en tiempo real
     await checkDatabaseConnection();
-    
+
     // Calcular tiempo de actividad
     const uptime = new Date() - startTime;
     const uptimeFormatted = {
@@ -83,10 +83,10 @@ app.get(['/api/health', '/health'], async (req, res) => {
       minutes: Math.floor((uptime % (1000 * 60 * 60)) / (1000 * 60)),
       seconds: Math.floor((uptime % (1000 * 60)) / 1000)
     };
-    
+
     // Obtener información del package.json
     const packageInfo = require('./package.json');
-    
+
     // Construir respuesta
     const healthStatus = {
       status: 'UP',
@@ -101,13 +101,13 @@ app.get(['/api/health', '/health'], async (req, res) => {
       },
       environment: process.env.NODE_ENV || 'development'
     };
-    
+
     // Enviar respuesta con código 200 si todo está bien, o 503 si hay problemas con la BD
     const statusCode = dbStatus.isConnected ? 200 : 503;
     res.status(statusCode).json(healthStatus);
   } catch (error) {
     console.error('Error al verificar el estado de la API:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       status: 'ERROR',
       error: 'Error al verificar el estado de la API',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
@@ -231,17 +231,17 @@ app.get('/api/ObtenerVencimientos', async (req, res) => {
         )
         ${filters.length ? ' AND ' + filters.join(' AND ') : ''}
     `;
-    
+
     const result = await pool.query(query, params);
     res.json(result.rows);
   } catch (error) {
     console.error('Error al obtener vencimientos:', error);
     const errorMessage = error.code === '28P01' ? 'Error de autenticación con la base de datos' :
-                        error.code === '3D000' ? 'Base de datos no encontrada' :
-                        error.code === 'ECONNREFUSED' ? 'No se puede conectar al servidor de base de datos' :
-                        error.code === '42P01' ? 'Tabla no encontrada' :
-                        'Error interno del servidor';
-    res.status(500).json({ 
+      error.code === '3D000' ? 'Base de datos no encontrada' :
+        error.code === 'ECONNREFUSED' ? 'No se puede conectar al servidor de base de datos' :
+          error.code === '42P01' ? 'Tabla no encontrada' :
+            'Error interno del servidor';
+    res.status(500).json({
       error: errorMessage,
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
@@ -257,13 +257,13 @@ app.post('/api/InsertarObservacion', async (req, res) => {
     const checkQuery = `
       SELECT * FROM vencimientos_beneficios_obs 
       WHERE vencimientos_beneficios_obspro = $1 
-      AND vencimientos_beneficios_obspar = $2
+      AND vencimientos_beneficios_obs par = $2
     `;
-    
+
     const checkResult = await pool.query(checkQuery, [obspro, obspar]);
-    
+
     let mensaje = '';
-    
+
     if (checkResult.rows.length > 0) {
       // Si existe, actualizar
       const updateQuery = `
@@ -275,7 +275,7 @@ app.post('/api/InsertarObservacion', async (req, res) => {
         WHERE vencimientos_beneficios_obspro = $1 
         AND vencimientos_beneficios_obspar = $2
       `;
-      
+
       await pool.query(updateQuery, [obspro, obspar, obscen, obsexp, observaciones, fecha]);
       mensaje = 'Observación actualizada correctamente';
     } else {
@@ -290,18 +290,18 @@ app.post('/api/InsertarObservacion', async (req, res) => {
           fecha
         ) VALUES ($1, $2, $3, $4, $5, COALESCE($6, NOW()))
       `;
-      
+
       await pool.query(insertQuery, [obspro, obspar, obscen, obsexp, observaciones, fecha]);
       mensaje = 'Observación insertada correctamente';
     }
-    
+
     res.json({ mensaje });
   } catch (error) {
     console.error('Error al insertar/actualizar observación:', error);
     const errorMessage = error.code === '23502' ? 'Faltan campos requeridos' :
-                        error.code === '42P01' ? 'Tabla no encontrada' :
-                        'Error interno del servidor';
-    res.status(500).json({ 
+      error.code === '42P01' ? 'Tabla no encontrada' :
+        'Error interno del servidor';
+    res.status(500).json({
       error: errorMessage,
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
@@ -317,18 +317,86 @@ app.get('/api/ObtenerActas', async (req, res) => {
         "Nro de expediente",
         "Nro de acta",
         "Contenido del Acta",
-        "FirmaID"
+        "FirmaID",
+        "FirmaBiometrica"
       FROM public.actas
       ORDER BY "ActaId" DESC
     `;
-    
+
     const result = await pool.query(query);
     res.json(result.rows);
   } catch (error) {
     console.error('Error al obtener actas:', error);
     const errorMessage = error.code === '42P01' ? 'Tabla no encontrada' :
-                        'Error interno del servidor';
-    res.status(500).json({ 
+      'Error interno del servidor';
+    res.status(500).json({
+      error: errorMessage,
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
+// GET - Obtener un acta específica por ID
+app.get('/api/ObtenerActa/:actaId', async (req, res) => {
+  try {
+    const { actaId } = req.params;
+
+    const query = `
+      SELECT 
+        "ActaId",
+        "Nro de expediente",
+        "Nro de acta",
+        "Contenido del Acta",
+        "FirmaID",
+        "FirmaBiometrica"
+      FROM public.actas
+      WHERE "ActaId" = $1
+    `;
+
+    const result = await pool.query(query, [actaId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Acta no encontrada' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error al obtener acta:', error);
+    const errorMessage = error.code === '42P01' ? 'Tabla no encontrada' :
+      error.code === '22P02' ? 'ID de acta inválido' :
+        'Error interno del servidor';
+    res.status(500).json({
+      error: errorMessage,
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
+// GET - Obtener actas por número de expediente
+app.get('/api/ObtenerActasPorExpediente/:nroExpediente', async (req, res) => {
+  try {
+    const { nroExpediente } = req.params;
+
+    const query = `
+      SELECT 
+        "ActaId",
+        "Nro de expediente",
+        "Nro de acta",
+        "Contenido del Acta",
+        "FirmaID",
+        "FirmaBiometrica"
+      FROM public.actas
+      WHERE "Nro de expediente" = $1
+      ORDER BY "ActaId" DESC
+    `;
+
+    const result = await pool.query(query, [nroExpediente]);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error al obtener actas por expediente:', error);
+    const errorMessage = error.code === '42P01' ? 'Tabla no encontrada' :
+      'Error interno del servidor';
+    res.status(500).json({
       error: errorMessage,
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
@@ -338,10 +406,10 @@ app.get('/api/ObtenerActas', async (req, res) => {
 // POST - Insertar o actualizar acta
 app.post('/api/GrabarActa', async (req, res) => {
   try {
-    const { ActaId, NroExpediente, NroActa, ContenidoActa, FirmaID } = req.body;
+    const { ActaId, NroExpediente, NroActa, ContenidoActa, FirmaID, FirmaBiometrica } = req.body;
 
     let mensaje = '';
-    
+
     if (ActaId) {
       // Si viene el ID, actualizar el registro existente
       const updateQuery = `
@@ -349,13 +417,14 @@ app.post('/api/GrabarActa', async (req, res) => {
         SET "Nro de expediente" = $2,
             "Nro de acta" = $3,
             "Contenido del Acta" = $4,
-            "FirmaID" = $5
+            "FirmaID" = $5,
+            "FirmaBiometrica" = $6
         WHERE "ActaId" = $1
         RETURNING "ActaId"
       `;
-      
-      const result = await pool.query(updateQuery, [ActaId, NroExpediente, NroActa, ContenidoActa, FirmaID]);
-      
+
+      const result = await pool.query(updateQuery, [ActaId, NroExpediente, NroActa, ContenidoActa, FirmaID, FirmaBiometrica]);
+
       if (result.rowCount > 0) {
         mensaje = 'Acta actualizada correctamente';
       } else {
@@ -368,22 +437,23 @@ app.post('/api/GrabarActa', async (req, res) => {
           "Nro de expediente",
           "Nro de acta",
           "Contenido del Acta",
-          "FirmaID"
-        ) VALUES ($1, $2, $3, $4)
+          "FirmaID",
+          "FirmaBiometrica"
+        ) VALUES ($1, $2, $3, $4, $5)
         RETURNING "ActaId"
       `;
-      
-      const result = await pool.query(insertQuery, [NroExpediente, NroActa, ContenidoActa, FirmaID]);
+
+      const result = await pool.query(insertQuery, [NroExpediente, NroActa, ContenidoActa, FirmaID, FirmaBiometrica]);
       mensaje = 'Acta insertada correctamente';
     }
-    
+
     res.json({ mensaje });
   } catch (error) {
     console.error('Error al insertar/actualizar acta:', error);
-    const errorMessage = error.code === '23502' ? 'Faltan campos requeridos' :
-                        error.code === '42P01' ? 'Tabla no encontrada' :
-                        'Error interno del servidor';
-    res.status(500).json({ 
+    const errorMessage = error.code === ' 23502' ? 'Faltan campos requeridos' :
+      error.code === '42P01' ? 'Tabla no encontrada' :
+        'Error interno del servidor';
+    res.status(500).json({
       error: errorMessage,
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
